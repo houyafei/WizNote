@@ -1,4 +1,4 @@
-**一 动态链接库概述**
+# 一 动态链接库概述
 
 动态链接库是一些独立文件，其中包含能被可执行程序或其他DLL调用来完成某项工作的函数。只有在其他模块调用动态链接库中的函数时，它才发挥作用。
 
@@ -16,7 +16,7 @@ Windwos API中所有的函数都包含在DLL中，其中有3个最重要的DLL�
 
 3 加载动态链接库的方式：隐式和显式
 
-**二 Win32DLL的创建和使用**
+# 二 Win32DLL的创建和使用
 
 需要在每一个将要被导出的函数前面添加标识符：**_declspec（dllexport)**，让DLL导出这些函数。
 
@@ -38,7 +38,7 @@ Windwos API中所有的函数都包含在DLL中，其中有3个最重要的DLL�
 
  
 
-```
+```c
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -58,7 +58,7 @@ __declspec(dllexport) int MyAdd(int a,int b);
 
  
 
-```
+```c
 ; 注释，用于说明注释导出内容
 LIBRARY "你的dll名字"; 注意要跟含导出函数的项目名字一致(不含后缀)
 EXPORTS ; 导出关键字，否则提示语句不支持目标平台，dll没有导出函数
@@ -75,7 +75,7 @@ funC @4 NONAME ;NONAME表示导出没有名字的函数
 
  
 
-```
+```c
 #pragma comment(linker,"/export:MyAdd=_MyAdd@8")
 ```
 
@@ -87,7 +87,7 @@ funC @4 NONAME ;NONAME表示导出没有名字的函数
 
  
 
-```
+```c
 HMODLE LoadLibrary(LPCTSTR lpFileName); 
 HMODULE WINAPI LoadLibraryEx(LPCTSTR lpFileName, _Reserved_ HANDLE hFile, DWORD dwFlags);  
 // 将指定的可执行模块映射到调用进程的地址空间,不仅能记载DLL，还可以加载exe(可用于病毒中)。
@@ -107,7 +107,7 @@ FreeLibraryAndExitThread(g_hDll, 0);
 
  
 
-```
+```c
 typedef int (_stdcall * AddProc)(int , int );
 //定义函数指针类型
 HINSTANCE hInst;
@@ -137,7 +137,7 @@ MessageBox(stradd);
 
  
 
-```
+```c
 BOOL WINAPI DllMain(HINSTANCE hinstDLL,   // DLL模块句柄
                     DWORD fdwReason,   // 系统调用该函数的原因
                     LPVOID lpReserved )  // 保留字段
@@ -164,7 +164,7 @@ Link.exe在生成dll文件的同时也生成导入库文件，如果dll作为最
 
  
 
-```
+```c
 //1，在目标进程分配线程函数的参数空间大小                 
 p=VirtualAllocEx(hkernel32,NULL,strlen(pname),MEM_COMMIT,PAGE_READWRITE);
 //2，把参数写到目标进程分配的空间中
@@ -187,7 +187,7 @@ HANDLE th = CreateRemoteThread( hkernel32,NULL,0,(LPTHREAD_START_ROUTINE)pfn,p,N
 
  
 
-```
+```c
 #include <Windows.h>    
 HMODULE g_hDll = NULL;  
 DWORD WINAPI UnloadProc(PVOID param)  // 卸载
@@ -231,12 +231,12 @@ FreeLibraryAndExitThread(g_hDll, 0);
 
 实际测试一下，在 DLL 被加载后，July 的模块视图显示了这个被加载的 DLL。
 
-![img](file:///C:/Users/chen/Documents/My Knowledge/temp/f7da53ce-66cc-4ebe-8b19-6bc39771b098/128/index_files/2.gif)
+![img](images/2.gif)
 
 在内存视图中检查模块句柄指向的内容，证明该 DLL 的确被加载了。
 
-![img](file:///C:/Users/chen/Documents/My Knowledge/temp/f7da53ce-66cc-4ebe-8b19-6bc39771b098/128/index_files/3.gif)
+![img](images/3.gif)
 
 **FreeLibraryAndExitThread** 调用后，再查看该模块句柄指向的内存，该地址已不再可用，销毁成功。
 
-![img](file:///C:/Users/chen/Documents/My Knowledge/temp/f7da53ce-66cc-4ebe-8b19-6bc39771b098/128/index_files/4.gif)
+![img](images/4.gif)

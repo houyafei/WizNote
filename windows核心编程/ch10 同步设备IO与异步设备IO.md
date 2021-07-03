@@ -1,5 +1,4 @@
 当线程发出一个同步设备I/O请求的时候，它会被临时挂起，直到设备完成I/O请求为止。此类挂起会损害性能，这是因为线程无法进行有用的工作，比如开始对另一个请求进行处理。
-
 因此，简而言之，我们希望线程不会被阻塞住，这样它们就能始终进行有用的工作。
 
 # 一 打开和关闭设备
@@ -8,7 +7,7 @@ windows的优势之一就是它所支持的设备数量。我们把设备定义�
 
 | **设备**       | **打开方式**                                                 | **常见用途**                                                 |
 | -------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 文件           | CreateFile                                                   |                                                              |
+| 文件 | CreateFile |   |
 | 目录           | CreateFile，需要指定**FILE_FLAG_BACKUP_SEMANTICS**标志       | 打开目录是我们能够改变目录的属性和它的时间戳                 |
 | 逻辑磁盘驱动器 | CreateFile（pszName为"**\\.\x:**"），其中x是驱动器的盘符     | 格式化驱动器或者检测驱动器媒介的大小                         |
 | 物理磁盘驱动器 | CreateFile（pszName为"**\\.\PHYSICALDRIVEx**"）.其中x是物理驱动器号。例如，为了读写用户的第一物理驱动器的扇区，我们应该指定"\\.\PHYSICALDRIVE0" | 访问分区表,注意，错误地写入设备可能会导致操作系统的文件系统无法访问磁盘的内容 |
@@ -20,9 +19,7 @@ windows的优势之一就是它所支持的设备数量。我们把设备定义�
 | 套接字         | Socket，accept或者AcceptEx                                   | 保温或数据流的传输                                           |
 | 控制台         | **CreateConsoleScreenBuffer**或**GetStdHandle**              | 文件窗口的屏幕缓存                                           |
 
- 
-
-```
+```c
 // 一般使用CloseHandle关闭
 BOOL CloseHandle(HANDLE hDevice);
 // 套接字则使用closesocket关闭
@@ -39,13 +36,13 @@ DWORD GetFileType(HANDLE hDevice);
 
 ## 2.1 取得文件的大小
 
- 
-
-```
+```c
 // 获取文件的逻辑大小
 DWORD WINAPI GetFileSize( HANDLE  hFile, _Out_opt_ LPDWORD lpFileSizeHigh);
+
 // lpFileSizeHigh和返回值确定文件大小 
 BOOL GetFileSizeEx(HANDLE hFile, PLARGE_INTEGER pliFileSize);
+
 // PLARGE_INTEGER是一个联合类型
 // 返回文件的物理大小
 DWORD GetCompressedFileSize(LPCTSTR lpFileName, _Out_opt_ LPDWORD lpFileSizeHigh);
@@ -53,9 +50,7 @@ DWORD GetCompressedFileSize(LPCTSTR lpFileName, _Out_opt_ LPDWORD lpFileSizeHigh
 
 ## 2.2 设置文件指针的位置
 
- 
-
-```
+```c
 // 注意：一个内核对象存在一个指针。
 BOOL WINAPI SetFilePointerEx(
   _In_      HANDLE         hFile,                // 设备句柄
@@ -65,17 +60,12 @@ BOOL WINAPI SetFilePointerEx(
 );
 ```
 
-**注意：**
+**注意：**  
+1.可以将文件指针设置超过文件当前大小。除非在该位置向文件写入数据或者调用**SetEndOfFile**，否则不会增加文件中在磁盘的实际大小  
+2.如果SetFilePointerEx操作的文件是用**FILE_FLAG_NO_BUFFERING**标志打开，那么文件指针只能被设置为扇区大小的整数倍。  
+3.windows没有提供**GetFilePointerEx**函数，可通过**SetFilePointerEx**获取。  
 
-1.可以将文件指针设置超过文件当前大小。除非在该位置向文件写入数据或者调用**SetEndOfFile**，否则不会增加文件中在磁盘的实际大小
-
-2.如果SetFilePointerEx操作的文件是用**FILE_FLAG_NO_BUFFERING**标志打开，那么文件指针只能被设置为扇区大小的整数倍。
-
-3.windows没有提供**GetFilePointerEx**函数，可通过**SetFilePointerEx**获取。
-
- 
-
-```
+```c
 SetFilePointerEx(hFile,0,&liCurrentPointer,FILE_CURRENT)
 ```
 
@@ -85,9 +75,7 @@ SetFilePointerEx(hFile,0,&liCurrentPointer,FILE_CURRENT)
 
 **SetEndOfFile将当前文件指针设定文件截断文件的大小或增加文件大小。**
 
- 
-
-```
+```c
 BOOL WINAPI SetEndOfFile(_In_ HANDLE hFile);
 ```
 
@@ -96,28 +84,28 @@ BOOL WINAPI SetEndOfFile(_In_ HANDLE hFile);
 windwos允许我们执行同步设备的I/O。记住，设备可以是文件，也可以是邮件曹、管道、套接字等等。无论使用的是何种类型的设备，我们都可以使用相同的函数来执行I/O操作。
 
 注意：
-
 1.执行同步设备的I/O时，CreateFile时一定不能指定参数**FILE_FLAG_OVERLAPPED**标志。
-
-2.同步执行ReadFile和WriteFile，如果成功返回TRUE，错误则返回FALSE，具体错误通过GetLastError返回。
-
- 
-
-```
-BOOL WINAPI WriteFile(HANDLE hFile, LPCVOID lpBuffer,
-                      DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, 
-                      LPOVERLAPPED lpOverlapped);
-BOOL WINAPI ReadFile(HANDLE hFile, LPVOID lpBuffer, 
-                     DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, 
-                     LPOVERLAPPED lpOverlapped);
+2.同步执行ReadFile和WriteFile，如果成功返回TRUE，错误则返回FALSE，具体错误通过GetLastError返回。  
+```c
+BOOL WINAPI WriteFile(
+	HANDLE hFile, 
+	LPCVOID lpBuffer,
+    DWORD nNumberOfBytesToWrite, 
+    LPDWORD lpNumberOfBytesWritten, 
+    LPOVERLAPPED lpOverlapped);
+    
+BOOL WINAPI ReadFile(
+	HANDLE hFile, 
+	LPVOID lpBuffer, 
+	DWORD nNumberOfBytesToRead, 
+	LPDWORD lpNumberOfBytesRead, 
+    LPOVERLAPPED lpOverlapped);
 // lpOverlapped：使用同步I/O时，该参数必须为NULL
 ```
 
-**3.1 将数据刷新至设备**
+## 3.1 将数据刷新至设备
 
- 
-
-```
+```c
 BOOL FlushFileBuffers(HANDLE hFile);    // 将缓冲区数据写入设备
 ```
 
@@ -125,9 +113,7 @@ BOOL FlushFileBuffers(HANDLE hFile);    // 将缓冲区数据写入设备
 
 windows vista中，下面函数允许我们**将一个给定线程尚未完成的同步I/O请求取消**:
 
- 
-
-```
+```c
 BOOL CancelSynchronousIO(HANDLE hThread); // hThread具有THREAD_THERMINATE权限
 ```
 
@@ -135,14 +121,13 @@ BOOL CancelSynchronousIO(HANDLE hThread); // hThread具有THREAD_THERMINATE权�
 
 要以异步的方式来访问设备，必须在调用CreateFile，并在dwFlagsAndAttributes参数中指定**FILE_FLAG_OVERLAPPED**标志打开设备。读写操作还是使用**ReadFile**和**WriteFile**。
 
- 
-
-```
+```c
 BOOL WINAPI WriteFile(_In HANDLE hFile, 
                       _In_out LPCVOID lpBuffer,
                       _In DWORD nNumberOfBytesToWrite, 
                       _In_out LPDWORD lpNumberOfBytesWritten,  /*无意义*/
                       _In_out LPOVERLAPPED lpOverlapped);
+                      
 BOOL WINAPI ReadFile(_In HANDLE hFile, 
                      _In_out LPVOID lpBuffer, 
                      _In DWORD nNumberOfBytesToRead, 
@@ -155,9 +140,7 @@ BOOL WINAPI ReadFile(_In HANDLE hFile,
 
 ## 4.1 OVERLAPPED结构
 
- 
-
-```
+```c
 typedef struct _OVERLAPPED {
   _Out  ULONG_PTR Internal;      // 错误码
   _Out  ULONG_PTR InternalHigh;  // 实际读写的字节数
@@ -170,7 +153,6 @@ typedef struct _OVERLAPPED {
 ## 4.2 异步设备I/O的注意事项
 
 在执行异步I/O操作的时候，设备驱动程序不一定以先入先出的方式来处理队列中的I/O请求。
-
 另外，如果请求的I/O是**异步方式执行**，那么正常情况下**ReadFile**和**WriteFile**会返回**FALSE**，这时候调用**GetLastError**返回**ERROR_IO_PENDING**，那么I/O请求已经被成功地加入了I/O队列，会在晚些时候完成。
 
 如果返回地是**ERROR_IO_PENDING**以外的值，那么表示I/O请求无法被添加到设备驱动程序队列。
@@ -181,20 +163,15 @@ typedef struct _OVERLAPPED {
 | ERROR_NOT_ENOUHT_QUOTA    |      |
 
 如何处理上述操作：
-
 这些错误地发生基本上是因为还有一定数量地待处理I/O请求未完成，因此我们需要等带一些I/O处理完成之后再次调用ReadFile和WriteFile。
 
 注意：
-
 在异步I/O完成之之前，一定不能移动或是销毁在发出I/O请求时所使用地OVERLAPPED结果（所以，异步I/O应该给每一个I/O搭配一个OVERLAPPED类型参数）。
 
 ## 4.3取消队列中的设备I/O请求
 
-在设备驱动程序对一个已经加入队列的设备I/O请求进行处理之前将其取消。
-
- 
-
-```
+在设备驱动程序对一个已经加入队列的设备I/O请求进行处理之前将其取消。  
+```c
 // 取消指定文件句柄内的所有IO请求
 BOOL WINAPI CancelIo( _In_ HANDLE hFile);
 // 取消指定文件句柄的特定IO请求
@@ -218,9 +195,7 @@ ReadFile和WriteFile将I/O请求添加到队列之前，会将内核对象设为
 
 **缺点：**不能处理多个I/O请求，例如同时对同一个文件的头尾进行读操作(这里指同一个句柄)，我们不能通过等待设备内核对象来对线程进行同步，因为任何一个操作完成都会使该设备内核对象被触发。
 
- 
-
-```
+```c
 // 注意，以下代码不值得参考，和同步读写性能一样，仅作讲解。
 HANDLE hFile = CreateFile(...,FILE_FLAG_OVERLAPPED,...);
 BYTE bBuffer[100];
@@ -239,19 +214,20 @@ if(bReadDone){
 
 ## 5.2 触发事件内核对象
 
-当一个异步IO完成时，设备驱动程序会检查**OVERLAPPED**结构的**hEvent**成员是否为NULL，如果不为NULL，那么驱动程序会调用**SetEvent**来触发事件。当然，驱动程序仍然也会将设备内核对象设为触发状态。
+当一个异步IO完成时，设备驱动程序会检查**OVERLAPPED**结构的**hEvent**成员是否为NULL，如果不为NULL，那么驱动程序会调用**SetEvent**来触发事件。当然，驱动程序仍然也会将设备内核对象设为触发状态。  
 
- 
-
-```
+```c
 BOOL WINAPI SetFileCompletionNotificationModes( _In_ HANDLE FileHandle, _In_ UCHAR  Flags);
 // Flags传入FILE_SKIP_SET_EVENT_ON_HANDLE，IO完成时不会触发文件句柄。
+
 BOOL WINAPI GetOverlappedResult(
   _In_  HANDLE       hFile,            // 设备句柄
   _In_  LPOVERLAPPED lpOverlapped,    // VOERLAPPED结构结果
   _Out_ LPDWORD      lpNumberOfBytesTransferred,    // 传输的字节数
   _In_  BOOL         bWait    // TRUE：等到IO完成才返回，FALSE：返回FALSE，GetLastError()返回ERROR_IO_INCOMPLETE.
 );
+
+
 // 例子：
 HANDLE hFile = CreateFile(..., FILE_FLAG_OVERLAPPED,...);
 BYTE bReadBuff[10];    // 读操作
@@ -279,13 +255,13 @@ switch(dw)
 }
 ```
 
-**5.3 使用可提醒I/O**
+## 5.3 使用可提醒I/O
 
 当系统创建一个线程的时候，会同时创建一个与线程相关联的队列。这个队列被称为**异步过程调用（APC）队列**。
 
 为了将IO完成通知添加到线程的APC队列中，我们应该调用**ReadFileEx**和**WriteFileEx。**
 
-**当****ReadFileEx****和****WriteFileEx**发出一个I/O请求的时候，这两个函数会**将I/O操作**以及**回调函数的地址(lpCompletionRoutine的值)传给设备驱动程序**。
+**当ReadFileEx和WriteFileEx**发出一个I/O请求的时候，这两个函数会**将I/O操作**以及**回调函数的地址(lpCompletionRoutine的值)传给设备驱动程序**。
 
 当设备驱动程序完成I/O请求的时候，会在发出I/O请求的线程的APC队列中添加一项。该项包含了回调函数的地址，以及在发出I/O请求时所使用的OVERLAPPED结构的地址。
 
@@ -293,22 +269,26 @@ switch(dw)
 
 注意，如果回调函数执行完毕后，会从APC队列中释放，如果需要对继续读写，则需要在对调函数返回前，重新调用ReadFileEx或WriteFileEx进行设置。
 
- 
-
-```
+```c
 // 异步读取文件
-BOOL WINAPI ReadFileEx(HANDLE hFile, 
-                       LPVOID lpBuffer, 
-                       DWORD nNumberOfBytesToRead,
-                       _Inout_ LPOVERLAPPED lpOverlapped, 
-                       _In_ LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine); /*回调函数*/
+BOOL WINAPI ReadFileEx(
+	HANDLE hFile, 
+    LPVOID lpBuffer, 
+    DWORD nNumberOfBytesToRead,
+    _Inout_ LPOVERLAPPED lpOverlapped, 
+    /*回调函数*/
+    _In_ LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine); 
+
 // 异步写入文件
-BOOL WINAPI WriteFileEx( HANDLE hFile, 
-                        LPVOID lpBuffer, 
-                        DWORD nNumberOfBytesToWrite,
-                         _Inout_  LPOVERLAPPED lpOverlapped, 
-                        _In_ LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine); /*回调函数*/
+BOOL WINAPI WriteFileEx( 
+	HANDLE hFile, 
+    LPVOID lpBuffer, 
+    DWORD nNumberOfBytesToWrite,
+    _Inout_  LPOVERLAPPED lpOverlapped, 
+    /*回调函数*/
+    _In_ LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine); 
 // lpCompletionRoutine：回调函数。
+
 // 下面是完成函数的格式：
 VOID CALLBACK FileIOCompletionRoutine(
   _In_    DWORD        dwErrorCode,                // 错误码
@@ -335,9 +315,7 @@ windows提供了6个函数，可以将线程设置为**可提醒状态**。前5�
 
 **注意，线程是否处在可提醒状态非常重要，这决定完成函数能否被正确地执行。**
 
- 
-
-```
+```c
 DWORD WINAPI SleepEx(DWORD dwMilliseconds, BOOL  bAlertable);
 DWORD WINAPI WaitForSingleObjectEx( HANDLE hHandle, DWORD dwMilliseconds, BOOL bAlertable);
 DWORD WINAPI WaitForMultipleObjectsEx(DWORD nCount,const HANDLE *lpHandles, BOOL bWaitAll,DWORD dwMilliseconds, BOOL bAlertable);
@@ -360,19 +338,16 @@ DWORD WINAPI MsgWaitForMultipleObjectsEx(
 ```
 
 **缺点：**
-
 1.回调函数 —— 可提醒函数要求我们创建一个回调函数，这使得代码的**实现变得更加复杂**。
-
 2.线程问题 —— **负载不均**，发出IO请求的线程必须同时对完成通知进行处理。如果一个线程发出多个请求，即使其他线程处于空闲状态，该线程也必须对请求的完成通知做出响应。
-
+3.
 Windows提供了一个函数，允许我们手动地将一项添加到APC队列中：
 
- 
-
-```
+```c
 DWORD WINAPI QueueUserAPC(PAPCFUNC pfnAPC, // 函数指针
                           HANDLE hThread,  // 插入目标APC队列的线程
                           ULONG_PTR dwData); // 完成函数的参数
+
 // 可提醒IO的APC完成函数的原型
 VOID WINAPI APCFunc(ULONG_PTR dwParam); 
 ```
@@ -388,20 +363,13 @@ IO完成端口地设计初衷就是与线程池配合使用。
 　　当你创建一个I/O完成端口时，内核实际上创建了5个不同的数据结构。
 
 注意这里的几个结构：
-
 1）设备列表 
-
 2）IO完成队列（先入先出） 
-
 3）等待线程队列（后入先出）【注意不是常规上的】 
-
 4）已释放现成队列
-
 5）已暂停现成列表
 
- 
-
-```
+```c
 // 1.创建I/O完成端口对象
 // 2.将设备与I/O完成端口关联起来
 HANDLE WINAPI CreateIoCompletionPort(
@@ -410,6 +378,8 @@ HANDLE WINAPI CreateIoCompletionPort(
   _In_     ULONG_PTR CompletionKey,            // 完成键，操作系统不关心这个传入什么值，一般是我们用来识别操作类型
   _In_     DWORD     NumberOfConcurrentThreads
 );
+
+
 // 1. 创建一个新的I/O完成端口对象
 HANDLE hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, N); 
 // N是同一时间最多能有线程线程处在可运行状态，传入0，则使用默认值（等于主机CPU数量）
@@ -435,15 +405,11 @@ BOOL AssociateDeviceWithCompletionPort(
 
 ### 5.4.2 IO完成端口地周边框架
 
-线程池的线程数量一般是CPU数量的两倍。
-
-线程池中的所有线程应该执行同一个函数。一般来说，线程完成初始化工作，会进入一个循环。在循环内部，线程将自己切换到睡眠状态，来等待设备IO请求完成并进入完成端口。
-
+线程池的线程数量一般是CPU数量的两倍。  
+线程池中的所有线程应该执行同一个函数。一般来说，线程完成初始化工作，会进入一个循环。在循环内部，线程将自己切换到睡眠状态，来等待设备IO请求完成并进入完成端口。  
 调用**GetQueuedCompletionStatus**可以达到这一目的：
 
- 
-
-```
+```c
 BOOL WINAPI GetQueuedCompletionStatus(
   _In_  HANDLE       CompletionPort,    // 要监控的完成端口句柄
   _Out_ LPDWORD      lpNumberOfBytes,   // 完成读写字节数
@@ -501,11 +467,8 @@ if(bOk){
 
 ## 5.5 模拟已完成地IO请求
 
-IO完成端口并不一定用于设备的IO。**PostQueuedCompletionStatus** 用来将一个已完成的IO通知追加到IO完成端口的队列中。
-
- 
-
-```
+IO完成端口并不一定用于设备的IO。**PostQueuedCompletionStatus** 用来将一个已完成的IO通知追加到IO完成端口的队列中。  
+```c
 BOOL WINAPI PostQueuedCompletionStatus(
   _In_     HANDLE       CompletionPort,    // 完成端口对象句柄
   _In_     DWORD        dwNumberOfBytesTransferred,    // 传输字节数
