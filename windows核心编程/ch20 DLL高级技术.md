@@ -3,12 +3,9 @@
 一个延迟载入的DLL是隐式链接的**(通过LoadLibrary+getProcAddress的方式)**，系统一开始不会将该DLL载入，只有当我们的代码试图去引用DLL中包含的一个符号时，系统才会实际载入该DLL。
 
 **缺点：**
-
-1. **含有导出字段的DLL是无法延迟载入**
-
-2. kernel32.dll模块是无法延迟载入的，这是因为必须载入该模块才能调用LoadLibrary和GetProcAddress
-
-3. **不应该在DllMain入口点函数中调用一个延迟载入的函数，因为这样可能会导致程序崩溃**
+- **含有导出字段的DLL是无法延迟载入**  
+- kernel32.dll模块是无法延迟载入的，这是因为必须载入该模块才能调用LoadLibrary和GetProcAddress  
+- **不应该在DllMain入口点函数中调用一个延迟载入的函数，因为这样可能会导致程序崩溃**  
 
 但是，如果采用显示装载DLL的话，大量的DLL在初始化阶段被加载，会导致程序加载缓慢，影响用户体验。因此，延迟装载被提了出来：
 
@@ -72,8 +69,6 @@ int main()
 系统对操作系统提供的某些DLL进行了特殊处理，这些DLL被称为已知的DLL。
 
 在注册表中有这个一个注册表项：
-
- 
 
 ```c
 HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs

@@ -12,7 +12,7 @@ Windwos API中所有的函数都包含在DLL中，其中有3个最重要的DLL�
 
 1 静态库和动态库区别:
 
-2 使用动态库的好处:
+2 使用动态库的好处: 共享代码库，减少程序的体积
 
 3 加载动态链接库的方式：隐式和显式
 
@@ -36,13 +36,13 @@ Windwos API中所有的函数都包含在DLL中，其中有3个最重要的DLL�
 
 **缺陷：**不能导出一个类的成员函数，只能用于导出全局函数这种情况。
 
- 
-
 ```c
 #ifdef __cplusplus
 extern "C"{
 #endif
+    
 __declspec(dllexport) int MyAdd(int a,int b);
+
 #ifdef __cplusplus
 }
 #endif
@@ -56,8 +56,6 @@ __declspec(dllexport) int MyAdd(int a,int b);
 
 （2）.def 文件中的注释由每个注释行开始处的分号 (**;**) 指定，且注释不能与语句共享一行。
 
- 
-
 ```c
 ; 注释，用于说明注释导出内容
 LIBRARY "你的dll名字"; 注意要跟含导出函数的项目名字一致(不含后缀)
@@ -67,13 +65,21 @@ funB @3
 funC @4 NONAME ;NONAME表示导出没有名字的函数
 ```
 
-**（3）使用__declspec(dllexport)和使用.def文件是有区别的。\**比较使用_declspec(dllexport)与使用.def文件来导出Dll函数的异同\**相同：创建项目和引用动态库相同不同：定义时：.def的要有其文件(LIBRARY EXPORTS),而另外一种则需要在其函数前添加_declspec(dllexport)使用时：.def使用函数前要有函数声明，而使用_declspec(dllexport)的要添加头文件**
+**（3）使用__declspec(dllexport)和使用.def文件是有区别的。_**
 
-**3 第二种不改变导出函数名的方法\**(相当于起一个别名)\****
+**比较使用_declspec(dllexport)与使用.def文件来导出Dll函数的异同**
+
+相同：创建项目和引用动态库相同
+
+不同：
+
+定义时：.def的要有其文件(LIBRARY EXPORTS),而另外一种则需要在其函数前添加_declspec(dllexport)_
+
+使用时：.def使用函数前要有函数声明，而使用_declspec(dllexport)的要添加头文件
+
+**3 第二种不改变导出函数名的方法(相当于起一个别名)**
 
 如果不想使用.def文件，可以使用第二种方法来导出未经改编的函数名。在DLL的源文件中添加一行类似下面的代码即可：
-
- 
 
 ```c
 #pragma comment(linker,"/export:MyAdd=_MyAdd@8")
@@ -85,10 +91,9 @@ funC @4 NONAME ;NONAME表示导出没有名字的函数
 
 通过特定的几个函数在需要使用时进行导入。当采用动态方式加载DLL时，在调用方程序中是不能看到调用该DLL的输入信息。
 
- 
-
 ```c
 HMODLE LoadLibrary(LPCTSTR lpFileName); 
+
 HMODULE WINAPI LoadLibraryEx(LPCTSTR lpFileName, _Reserved_ HANDLE hFile, DWORD dwFlags);  
 // 将指定的可执行模块映射到调用进程的地址空间,不仅能记载DLL，还可以加载exe(可用于病毒中)。
  
@@ -97,6 +102,7 @@ HMODULE GetModuleHandle(PCTSTR pszModule);
  
 FARPROC GetProcAddress(HMODLE hModule, LPCSTR lpProcName);
 // 获取导出函数的地址，失败返回NULL，当lpProcName高16位位0时，标识通过标识进行函数查找索引。
+
 BOOL FreeLibrary(HMODULE hLibModule) // 显示卸载DLL模块
     
 //在动态库卸载自己(相当于FreeLibrary+ExitThread)
@@ -105,16 +111,15 @@ FreeLibraryAndExitThread(g_hDll, 0);
 
 // 使用代码例子：
 
- 
-
 ```c
 typedef int (_stdcall * AddProc)(int , int );
 //定义函数指针类型
+
 HINSTANCE hInst;
 hInst = LoadLibrary("test.dll");//动态加载Dll
+
 //获取Dll的导出函数
 AddProc fAdd = (AddProc)::GetProcAddress(hInst,"add");
- 
 if(fAdd != NULL)
 {
     MessageBox("获取Add函数地址失败！");
@@ -134,8 +139,6 @@ MessageBox(stradd);
 对于动态链接库来说，获取其自身**模块句柄**的唯一途径就是在入口函数被调用时保存这个参数。
 
 **DisableThreadLibraryCalls**禁用DLL_THREAD_ATTACH和DLL_THREAD_DETACH通知的dll的模块句柄。
-
- 
 
 ```c
 BOOL WINAPI DllMain(HINSTANCE hinstDLL,   // DLL模块句柄
@@ -162,8 +165,6 @@ Link.exe在生成dll文件的同时也生成导入库文件，如果dll作为最
 
 **八 注入动态链接库**
 
- 
-
 ```c
 //1，在目标进程分配线程函数的参数空间大小                 
 p=VirtualAllocEx(hkernel32,NULL,strlen(pname),MEM_COMMIT,PAGE_READWRITE);
@@ -184,8 +185,6 @@ HANDLE th = CreateRemoteThread( hkernel32,NULL,0,(LPTHREAD_START_ROUTINE)pfn,p,N
 2. 卸载 DLL 的代码应该是放在 DLL之中的。
 
 当然，如果不考虑后果的话，这个代码并不难写，如下：
-
- 
 
 ```c
 #include <Windows.h>    
@@ -221,8 +220,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, PVOID lpvReserved)
 
 因此，我们只需要把 FreeLibrary 的一句替换为：
 
- 
-
 ```
 FreeLibraryAndExitThread(g_hDll, 0);  
 ```
@@ -240,3 +237,4 @@ FreeLibraryAndExitThread(g_hDll, 0);
 **FreeLibraryAndExitThread** 调用后，再查看该模块句柄指向的内存，该地址已不再可用，销毁成功。
 
 ![img](images/4.gif)
+

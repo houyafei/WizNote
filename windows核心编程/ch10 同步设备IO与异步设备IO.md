@@ -6,7 +6,7 @@
 windows的优势之一就是它所支持的设备数量。我们把设备定义为能够与之进行通信的任何东西。
 
 | **设备**       | **打开方式**                                                 | **常见用途**                                                 |
-| -------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| :------------- | :----------------------------------------------------------: | :----------------------------------------------------------: |
 | 文件 | CreateFile |   |
 | 目录           | CreateFile，需要指定**FILE_FLAG_BACKUP_SEMANTICS**标志       | 打开目录是我们能够改变目录的属性和它的时间戳                 |
 | 逻辑磁盘驱动器 | CreateFile（pszName为"**\\.\x:**"），其中x是驱动器的盘符     | 格式化驱动器或者检测驱动器媒介的大小                         |
@@ -22,8 +22,10 @@ windows的优势之一就是它所支持的设备数量。我们把设备定义�
 ```c
 // 一般使用CloseHandle关闭
 BOOL CloseHandle(HANDLE hDevice);
+
 // 套接字则使用closesocket关闭
 int closesocket(SOCKET s);
+
 // 查询设备的类型
 DWORD GetFileType(HANDLE hDevice);
 // FILE_TYPE_UNKNOWN 文件为未知类型
@@ -106,7 +108,7 @@ BOOL WINAPI ReadFile(
 ## 3.1 将数据刷新至设备
 
 ```c
-BOOL FlushFileBuffers(HANDLE hFile);    // 将缓冲区数据写入设备
+BOOL FlushFileBuffers(HANDLE hFile);  // 将缓冲区数据写入设备
 ```
 
 ## 3.2 同步I/O的取消
@@ -122,17 +124,20 @@ BOOL CancelSynchronousIO(HANDLE hThread); // hThread具有THREAD_THERMINATE权�
 要以异步的方式来访问设备，必须在调用CreateFile，并在dwFlagsAndAttributes参数中指定**FILE_FLAG_OVERLAPPED**标志打开设备。读写操作还是使用**ReadFile**和**WriteFile**。
 
 ```c
-BOOL WINAPI WriteFile(_In HANDLE hFile, 
-                      _In_out LPCVOID lpBuffer,
-                      _In DWORD nNumberOfBytesToWrite, 
-                      _In_out LPDWORD lpNumberOfBytesWritten,  /*无意义*/
-                      _In_out LPOVERLAPPED lpOverlapped);
+BOOL WINAPI WriteFile(
+    _In HANDLE hFile, 
+    _In_out LPCVOID lpBuffer,
+    _In DWORD nNumberOfBytesToWrite, 
+    _In_out LPDWORD lpNumberOfBytesWritten, /*无意义*/
+    _In_out LPOVERLAPPED lpOverlapped);
                       
-BOOL WINAPI ReadFile(_In HANDLE hFile, 
-                     _In_out LPVOID lpBuffer, 
-                     _In DWORD nNumberOfBytesToRead, 
-                     _In_out LPDWORD lpNumberOfBytesRead, /*无意义*/
-                     _In_out LPOVERLAPPED lpOverlapped);
+BOOL WINAPI ReadFile(
+    _In HANDLE hFile, 
+    _In_out LPVOID lpBuffer, 
+    _In DWORD nNumberOfBytesToRead, 
+    _In_out LPDWORD lpNumberOfBytesRead, /*无意义*/
+    _In_out LPOVERLAPPED lpOverlapped);
+
 // lpNumberOfBytesWritten和lpNumberOfBytesRead：无意义，设为NULL。
 // lpOverlapped:需要指定一个OVERLAPPED结构对象。
 // 使用可提醒IO进行异步I/O时，必须使用ReadFileEx和ReadFileEx替换ReadFile和WriteFile。（请参考5.3）
@@ -144,8 +149,11 @@ BOOL WINAPI ReadFile(_In HANDLE hFile,
 typedef struct _OVERLAPPED {
   _Out  ULONG_PTR Internal;      // 错误码
   _Out  ULONG_PTR InternalHigh;  // 实际读写的字节数
-  _In   DWORD Offset; // 读写起始位置(非文件设备忽略该字段,此时必须初始化为0,异步文件IO时必须指定)
+    
+  // 读写起始位置(非文件设备忽略该字段,此时必须初始化为0,异步文件IO时必须指定)
+  _In   DWORD Offset; 
   _In   DWORD OffsetHigh; 
+    
   _In_out HANDLE hEvent; // 事件对象
 } OVERLAPPED, *LPOVERLAPPED;
 ```
@@ -157,8 +165,9 @@ typedef struct _OVERLAPPED {
 
 如果返回地是**ERROR_IO_PENDING**以外的值，那么表示I/O请求无法被添加到设备驱动程序队列。
 
+| 宏名 |  说明  |
+| ------------------------- | ------------------------- |
 | ERROR_INVALID_USER_BUFFER |      |
-| ------------------------- | ---- |
 | RROR_NOT_ENOUHT_MEMORY    |      |
 | ERROR_NOT_ENOUHT_QUOTA    |      |
 
@@ -174,6 +183,7 @@ typedef struct _OVERLAPPED {
 ```c
 // 取消指定文件句柄内的所有IO请求
 BOOL WINAPI CancelIo( _In_ HANDLE hFile);
+
 // 取消指定文件句柄的特定IO请求
 BOOL WINAPI CancelIoEx(_In_ HANDLE hFile, _In_opt_ LPOVERLAPPED lpOverlapped);
 ```
@@ -182,8 +192,8 @@ BOOL WINAPI CancelIoEx(_In_ HANDLE hFile, _In_opt_ LPOVERLAPPED lpOverlapped);
 
 windows提供了4中不同方法来接收I/O请求已经完成地通知。
 
-| **技术**         | **摘要**                                                     |
-| ---------------- | ------------------------------------------------------------ |
+| **技术**                                    | **摘要**                   |
+| --------------------------------- | ------------------------------------------- |
 | 触发设备内核对象 | 当向一个设备同时发出多个I/O请求的时候，这种方式没什么用 它允许一个线程发出I/O请求，另一个线程对结果进行处理 |
 | 触发事件内核对象 | 这种方法允许我们向一个设备同时发出多个I/O请求 **它允许一个线程发出I/O请求，另一个线程对结果进行处理** |
 | 使用可提醒I/O    | 这种方法允许我们向一个设备同时发出多个I/O请求。 **发出I/O请求的线程必须对结果进行处理。** |
@@ -203,10 +213,12 @@ OVERLAPPED o= {0};
 o.Offset = 345;
 BOOL bReadDown = ReadFile(hFile, bBuffer, 100, NULL, &o);
 DWORD dwError = GetLastError();
+
 if(!bReadDown && dwError == ERROR_IO_PENDING)){
     WaitForSingleObject(hFile,INFINITE);
     bReadDone = TRUE;
 }
+
 if(bReadDone){  
 }else{
 }
@@ -340,13 +352,15 @@ DWORD WINAPI MsgWaitForMultipleObjectsEx(
 **缺点：**
 1.回调函数 —— 可提醒函数要求我们创建一个回调函数，这使得代码的**实现变得更加复杂**。
 2.线程问题 —— **负载不均**，发出IO请求的线程必须同时对完成通知进行处理。如果一个线程发出多个请求，即使其他线程处于空闲状态，该线程也必须对请求的完成通知做出响应。
-3.
+
 Windows提供了一个函数，允许我们手动地将一项添加到APC队列中：
 
 ```c
-DWORD WINAPI QueueUserAPC(PAPCFUNC pfnAPC, // 函数指针
-                          HANDLE hThread,  // 插入目标APC队列的线程
-                          ULONG_PTR dwData); // 完成函数的参数
+DWORD WINAPI QueueUserAPC(
+    PAPCFUNC pfnAPC, // 函数指针
+    HANDLE hThread,  // 插入目标APC队列的线程
+    ULONG_PTR dwData // 完成函数的参数
+); 
 
 // 可提醒IO的APC完成函数的原型
 VOID WINAPI APCFunc(ULONG_PTR dwParam); 
@@ -383,8 +397,10 @@ HANDLE WINAPI CreateIoCompletionPort(
 // 1. 创建一个新的I/O完成端口对象
 HANDLE hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, N); 
 // N是同一时间最多能有线程线程处在可运行状态，传入0，则使用默认值（等于主机CPU数量）
+
 // 2. 将设备与I/O完成端口关联起来（这个很重要）
 CreateIoCompletionPort(hDevice, hCompletionPort, CK_READ【自定义】, 0);
+
 //
 //////////// 思路上可以将它拆成两个函数
 // 
@@ -392,6 +408,7 @@ CreateIoCompletionPort(hDevice, hCompletionPort, CK_READ【自定义】, 0);
 HANDLE CreateNewCompletionPort(DWORD dwNumberOfConcurrentThread){
     return CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, dwNumberOfConcurrentThread);
 }
+
 //  关联IO完成端口对象和设备对象
 // 所有发往hDevice的IO请求在完成的时候都有一个dwCompletionKey。
 BOOL AssociateDeviceWithCompletionPort(
@@ -406,7 +423,7 @@ BOOL AssociateDeviceWithCompletionPort(
 ### 5.4.2 IO完成端口地周边框架
 
 线程池的线程数量一般是CPU数量的两倍。  
-线程池中的所有线程应该执行同一个函数。一般来说，线程完成初始化工作，会进入一个循环。在循环内部，线程将自己切换到睡眠状态，来等待设备IO请求完成并进入完成端口。  
+**线程池中的所有线程应该执行同一个函数**。一般来说，线程完成初始化工作，会进入一个循环。在循环内部，线程将自己切换到睡眠状态，来等待设备IO请求完成并进入完成端口。  
 调用**GetQueuedCompletionStatus**可以达到这一目的：
 
 ```c
@@ -417,6 +434,7 @@ BOOL WINAPI GetQueuedCompletionStatus(
   _Out_ LPOVERLAPPED *lpOverlapped,     // 返回Overlapped结构
   _In_  DWORD        dwMilliseconds     // 等待时间
 );
+
 // 如果预计会不断收到大量的IO请求，那么我们可以调用GetQueuedCompletionStatusEx同时取得多个IO请求
 // 而不必让许多线程等待完成端口，减少线程上下文切换的时间
 BOOL WINAPI GetQueuedCompletionStatusEx(
@@ -427,6 +445,8 @@ BOOL WINAPI GetQueuedCompletionStatusEx(
   _In_  DWORD              dwMilliseconds,
   _In_  BOOL               fAlertable
 );
+
+
 /////////////////////////////////////////////////////////////////
 // 检查队列情况
 /////////////////////////////////////////////////////////////////
@@ -434,6 +454,8 @@ BOOL WINAPI GetQueuedCompletionStatusEx(
 DWORD dwNumBytes;
 ULONG_PTR CompletionKey;
 OVERLAPPED* pOverlapped;
+
+
 // 绑定设备句柄和IO完成端口句柄
 BOOL bOk = GetQueuedCompletionStatus(hIOCP,&dwNumBytes, &CompletionKey, &pOverlapped, 1000);
 DWORD dwError = GetLastError();
